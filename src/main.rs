@@ -10,6 +10,8 @@
 /// 2) This code is primarily for optimizing POVMs for dimension 2. The code can be extended to
 ///    higher dimensions. If you want to do that though, the code needs to be extensively
 ///    refactored
+///
+///    Big thanks to Anthropic's Claude for helping me out
 use rayon::prelude::*;
 use std::cmp::Ordering;
 use std::f64;
@@ -190,10 +192,6 @@ fn optimize_povm_progressive(
 
         // Otherwise, prepare candidates for the next epsilon level
         // Only keep complete POVM sets with highest objective values
-        //candidates.sort_by(|a, b| {
-        //    b.max_objective_value.partial_cmp(&a.max_objective_value)
-        //        .unwrap_or(Ordering::Equal)
-        //});
         println!("Number of elements before truncation: {}", candidates.len());
         candidates = truncate_povm_candidates(candidates);
         println!("Number of elements after truncation: {}", candidates.len());
@@ -208,9 +206,9 @@ fn optimize_povm_progressive(
 fn main() {
     // Default parameters
     let n = 4;
-    //let epsilons = vec![0.1, 0.05, 0.025, 0.015, 0.0075];//, 0.01];
-    let epsilons = vec![0.1, 0.05, 0.025, 0.0125, 0.0125 / 2.0];//, 0.01875];//, 0.01];
-    let calc_types = vec!["0"];//, "max", "0"];
+    let epsilons = vec![0.1, 0.05, 0.025, 0.0125, 0.0125 / 2.0];
+    let calc_types = vec!["0"];//, "max", "total", "1"]; "0/ 1" represents the case for conditional
+                               //bit accessible mutual information
     for calc_type in calc_types {
 
         println!("Running POVM optimization with parameters:");

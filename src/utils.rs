@@ -137,11 +137,9 @@ pub fn initial_grid(
     // Extract bounds for parameters
     let x_max = remainder.data[[0, 0]].re;
     let z_max = remainder.data[[1, 1]].re;
-    //let y_max = f64::min(f64::sqrt(x_max * z_max), 0.5);
 
     // Create parameter grids
     let x_grid = generate_grid(0.0, eps, steps);
-    //let y_grid = generate_grid(-y_max, y_max, steps);
     let y_grid = vec![-1.0, 1.0];
     let z_grid = generate_grid(0.0, eps, steps);
 
@@ -152,14 +150,9 @@ pub fn initial_grid(
         .flat_map(|&x| y_grid.iter().map(move |&y| (x, y)))
         .flat_map(|(x, y)| z_grid.iter().map(move |&z| (x, x.sqrt() * z.sqrt() * y, z)))
         .collect();
-    // TODO: lev please check this over and make it optional!
+
     all_combinations.par_iter()
         .filter_map(|&(x, y, z)| {
-            // Symmetry check for BB84 (optional)
-            if current_povms.is_empty() && x < z {
-                return None; // Skip due to symmetry
-            }
-
             let element = Matrix2x2::from_params(x, y, z);
 
             // Check if element is positive semidefinite
@@ -167,16 +160,6 @@ pub fn initial_grid(
                 return None;
             }
             Some(element)
-
-                //// Check if adding this element still allows a valid POVM
-                //let sum_with_element = Matrix2x2::sum(current_povms).add(&element);
-                //let diff = identity.sub(&sum_with_element);
-                //
-                //if diff.is_positive_semidefinite(1e-6) {
-                //    Some(element)
-                //} else {
-                //    None
-                //}
         })
     .collect()
 }
@@ -192,9 +175,8 @@ pub fn discretize_povms(
     let discretizations: Vec<Vec<(f64, f64, f64)>> = current_povms.iter().map(|m| {
         let (x, y , z) = m.to_params();
         // Generate a grid around the current element of width prior_eps and step size eps
-        // TODO: check that its okay to only go forward
         let x_grid = generate_grid(x, eps, n_steps as usize);
-        let y_grid = vec![-1.0, 1.0]; //generate_grid(y, y + prior_eps, n_steps as usize);
+        let y_grid = vec![-1.0, 1.0]; 
         let z_grid = generate_grid(z, eps, n_steps as usize);
         let v = x_grid.iter()
             .flat_map(|&x| y_grid.iter().map(move |&y| (x, y)))
@@ -203,14 +185,9 @@ pub fn discretize_povms(
         v
     }).collect();
     let identity = Matrix2x2::identity();
-    // TODO: lev please check this over and make it optional!
+
     let discretizations_filtered: Vec<Vec<Matrix2x2>> = discretizations.par_iter().map(|combinations| {
         combinations.iter().filter_map(|&(x, y, z)| {
-            // Symmetry check for BB84 (optional)
-            if current_povms.is_empty() && x < z {
-                return None; // Skip due to symmetry
-            }
-
             let element = Matrix2x2::from_params(x, y, z);
 
             // Check if element is positive semidefinite
@@ -269,8 +246,6 @@ pub fn calculate_expectation_values(povms: &[Matrix2x2], states: &[Matrix2x2]) -
     results
 }
 
-//  TODO: we do not search over all complex here in general!!!
-//
 // Generate all 2x2 matrices with +- eps in the diagonal entries and +- eps +- i eps in the
 // off-diagonal entries
 fn gen_eps_extremal(eps: f64) -> Vec<Matrix2x2> {
@@ -311,16 +286,15 @@ fn calculate_collision_mutual_info_fuzzy(joint_prob: &Array2<f64>,
             let min_val = if p_y > 1e-10 { (p_xy * p_xy) / (p_y) } else { 0.0 };
             for (i, deno_f) in fuzzy_traces.iter().enumerate() {
                 let num_f = fuzzy_table[[x, i]];
-                // TODO: this is hardcoded right now, but Tr[M_i rho] <= Tr[rho] = 0.5
+
                 let p_xy_adj = (p_xy + num_f).min(px[x]);
-                //let v_orig = if p_y > 1e-10 { (p_xy * p_xy) / (p_y)} else { 0.0 };
-                assert!(*deno_f >= 0.0, "Fuzzy trace should be non-negative? Idk should check but yes");
+
+                assert!(*deno_f >= 0.0, "Fuzzy trace should be non-negative");
                 let v = if p_y + deno_f > 1e-10 { (p_xy_adj * p_xy_adj) / (p_y + deno_f)} else { 0.0 };
                 let cmp = v;
                 if cmp >= max_val && p_xy_adj <= 1.0 {
                     max_val = cmp;
                 }
-                // TODO: can we make this tighter/ should we?
             }
             numer += max_val;
             numer_min += min_val;
@@ -514,14 +488,8 @@ pub fn evaluate_povm_candidate_fuzzy(povms: &[Matrix2x2], states: &[Matrix2x2], 
     let expec_vals_orig = calculate_expectation_values(povms, states);
 
     // Traces with the state matrices
-    // TODO: we are not even searching over all of them!
     let traces_states_fuzzy = calculate_expectation_values(&extremals, states);
     let traces_fuzzy: Vec<f64> = extremals.iter().map(|x| x.trace_product(&Matrix2x2::identity()).re).collect::<Vec<_>>();
-    //assert!(traces_states_fuzzy.len() == traces_fuzzy.len());
-
-    //let fuzzy_vals = traces_states_fuzzy.iter().zip(traces_fuzzy.iter()).map(
-    //    |(x, y)| (*x, *y)).collect::<Vec<(f64, f64)>>();
-
     obj_function_collision_fuzzy(&expec_vals_orig, states.len(), povms.len(), calc_type, &traces_fuzzy, &traces_states_fuzzy, eps)
 }
 
