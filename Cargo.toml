@@ -10,3 +10,4 @@ ndarray = "0.16.1"
 ndarray-linalg = { version = "0.17.0", features = ["openblas"] }
 num-traits = "0.2.19"
 rayon = "1.10.0"
+
