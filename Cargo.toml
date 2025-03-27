@@ -1,0 +1,12 @@
+[package]
+name = "rust"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+itertools = "0.14.0"
+nalgebra = "0.33.2"
+ndarray = "0.16.1"
+ndarray-linalg = { version = "0.17.0", features = ["openblas"] }
+num-traits = "0.2.19"
+rayon = "1.10.0"
